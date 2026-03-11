@@ -36,8 +36,9 @@ export function PlayableStall({
   setPrice: (item: MenuItem, price: number) => void,
   isPaused: boolean
 }) {
-  const { pos, isMoving } = usePlayerMovement(BOUNDS, isPaused);
+  const { pos, isMoving, facing } = usePlayerMovement(BOUNDS, isPaused);
   const [cooldown, setCooldown] = useState(0);
+  const [isServing, setIsServing] = useState(false);
   const [floatingTexts, setFloatingTexts] = useState<{id: number, x: number, y: number, text: string}[]>([]);
 
   const nearestStation = useMemo(() => {
@@ -81,6 +82,10 @@ export function PlayableStall({
           if (canMake && gameState.customersWaiting[nearestStation.item as MenuItem] > 0) {
             sellItem(nearestStation.item as MenuItem);
             setCooldown(3); // 300ms
+            
+            // Trigger serve animation
+            setIsServing(true);
+            setTimeout(() => setIsServing(false), 300);
             
             // Add floating text
             const price = gameState.customPrices[nearestStation.item as MenuItem] || menuItem.basePrice;
@@ -263,7 +268,7 @@ export function PlayableStall({
                   {/* Player Shadow */}
                   <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-12 h-5 bg-black/40 rounded-full blur-[2px]"></div>
                   <div className="relative pb-2 drop-shadow-xl">
-                    <Player3D config={gameState.avatar} isMoving={isMoving} />
+                    <Player3D config={gameState.avatar} isMoving={isMoving} isServing={isServing} facing={facing} />
                   </div>
                 </div>
               );
