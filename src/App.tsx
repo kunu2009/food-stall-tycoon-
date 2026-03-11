@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { useGameLoop } from './hooks/useGameLoop';
 import { Footer } from './components/Footer';
+import { StallVisualizer } from './components/StallVisualizer';
+import { PlayableStall } from './components/PlayableStall';
+import { PlayerAvatar } from './components/PlayerAvatar';
+import { AvatarCustomizer } from './components/AvatarCustomizer';
 import { INGREDIENTS, MENU, STALLS, UPGRADES } from './constants';
 import { Ingredient, MenuItem, StallType } from './types';
 import { Store, ShoppingCart, TrendingUp, Settings, Clock, Sun, CloudRain, Flame, Wind, AlertCircle, Coffee, Utensils, Truck, Users, Star, Heart, UsersRound } from 'lucide-react';
@@ -16,10 +20,13 @@ export default function App() {
     unlockMenuItem,
     isPaused, 
     setIsPaused,
-    resetGame
+    resetGame,
+    updateAvatar
   } = useGameLoop();
 
   const [activeTab, setActiveTab] = useState<'sell' | 'market' | 'upgrades' | 'rivals'>('sell');
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
 
   const formatTime = (minutes: number) => {
     const h = Math.floor(minutes / 60);
@@ -51,9 +58,13 @@ export default function App() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="bg-teal-100 p-2 rounded-xl text-teal-700">
-              {getStallIcon(gameState.currentStall)}
-            </div>
+            <button 
+              onClick={() => setShowAvatarModal(true)}
+              className="hover:scale-105 transition-transform active:scale-95"
+              title="Customize Avatar"
+            >
+              <PlayerAvatar config={gameState.avatar} size={48} />
+            </button>
             <div>
               <h1 className="font-bold text-xl tracking-tight text-slate-900">{gameState.currentStall}</h1>
               <div className="flex items-center gap-4 text-sm font-medium">
@@ -106,6 +117,14 @@ export default function App() {
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         
+        {/* Visualizer */}
+        <StallVisualizer 
+          stall={gameState.currentStall} 
+          upgrades={gameState.upgrades} 
+          weather={gameState.weather} 
+          time={gameState.time} 
+        />
+
         {/* Messages Log */}
         <div className="mb-8 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Recent Activity</h3>
@@ -151,84 +170,12 @@ export default function App() {
           
           {/* SELL TAB */}
           {activeTab === 'sell' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {gameState.unlockedItems.map(item => {
-                const menuItem = MENU[item];
-                // Check if we have ingredients
-                let canMake = true;
-                const missing: string[] = [];
-                for (const [ing, qty] of Object.entries(menuItem.recipe)) {
-                  if ((gameState.inventory[ing as Ingredient] || 0) < (qty as number)) {
-                    canMake = false;
-                    missing.push(ing);
-                  }
-                }
-
-                return (
-                  <div key={item} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="font-bold text-lg text-slate-800">{item}</h3>
-                      <div className="flex flex-col items-end">
-                        <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                          <span className="text-slate-500 px-2 font-bold">₹</span>
-                          <input 
-                            type="number" 
-                            min="1"
-                            value={gameState.customPrices[item]}
-                            onChange={(e) => setPrice(item, parseInt(e.target.value) || 1)}
-                            className="w-16 bg-white border border-slate-200 rounded-md px-2 py-1 text-sm font-bold text-slate-800 text-center outline-none focus:border-teal-500"
-                          />
-                        </div>
-                        <span className="text-[10px] text-slate-400 mt-1">Base: ₹{menuItem.basePrice}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="mb-4 flex-grow">
-                      <div className="flex justify-between items-center mb-2">
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Recipe</p>
-                        <div className="flex items-center gap-1 text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full text-xs font-bold">
-                          <UsersRound size={12} />
-                          {gameState.customersWaiting[item]} Waiting
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {Object.entries(menuItem.recipe).map(([ing, qty]) => {
-                          const hasEnough = (gameState.inventory[ing as Ingredient] || 0) >= (qty as number);
-                          return (
-                            <span key={ing} className={`text-xs px-2 py-1 rounded-md border ${hasEnough ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-red-50 border-red-200 text-red-600'}`}>
-                              {qty} {ing}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <button 
-                      onClick={() => sellItem(item)}
-                      disabled={!canMake || gameState.customersWaiting[item] <= 0}
-                      className={`w-full py-3 rounded-xl font-bold transition-all active:scale-[0.98] ${
-                        !canMake ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 
-                        gameState.customersWaiting[item] <= 0 ? 'bg-slate-100 text-slate-500 cursor-not-allowed' :
-                        'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
-                      }`}
-                    >
-                      {!canMake ? `Missing Ingredients` : 
-                       gameState.customersWaiting[item] <= 0 ? 'Waiting for Customers...' : 
-                       'Prepare & Sell'}
-                    </button>
-                  </div>
-                );
-              })}
-
-              {/* Locked Items Hint */}
-              {(Object.keys(MENU) as MenuItem[]).filter(i => !gameState.unlockedItems.includes(i)).map(item => (
-                <div key={item} className="bg-slate-50 p-5 rounded-2xl border border-slate-200 border-dashed flex flex-col items-center justify-center text-center opacity-60">
-                  <Utensils className="text-slate-400 mb-2" size={24} />
-                  <h3 className="font-bold text-slate-600">{item}</h3>
-                  <p className="text-xs text-slate-500 mt-1">Requires {MENU[item].reqStall}</p>
-                </div>
-              ))}
-            </div>
+            <PlayableStall 
+              gameState={gameState} 
+              sellItem={sellItem} 
+              setPrice={setPrice} 
+              isPaused={isPaused} 
+            />
           )}
 
           {/* MARKET TAB */}
@@ -464,13 +411,49 @@ export default function App() {
           {isPaused ? <Store size={20} /> : <Clock size={20} />}
         </button>
         <button 
-          onClick={resetGame}
+          onClick={() => setShowResetModal(true)}
           className="bg-white p-3 rounded-full shadow-lg border border-slate-200 text-slate-600 hover:text-red-600 transition-colors"
           title="Reset Game"
         >
           <Settings size={20} />
         </button>
       </div>
+
+      {/* Reset Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Restart Game?</h3>
+            <p className="text-slate-600 mb-6">Are you sure you want to reset your progress? You will lose all your money, stalls, and upgrades. This cannot be undone.</p>
+            <div className="flex gap-3 justify-end">
+              <button 
+                onClick={() => setShowResetModal(false)}
+                className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  resetGame();
+                  setShowResetModal(false);
+                }}
+                className="px-4 py-2 rounded-xl font-bold bg-red-600 text-white hover:bg-red-700 transition-colors shadow-sm"
+              >
+                Yes, Restart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Avatar Customizer Modal */}
+      {showAvatarModal && (
+        <AvatarCustomizer 
+          config={gameState.avatar} 
+          onUpdate={updateAvatar} 
+          onClose={() => setShowAvatarModal(false)} 
+        />
+      )}
 
       <Footer />
     </div>

@@ -5,7 +5,15 @@ import { INITIAL_STATE, INGREDIENTS, MENU, STALLS, UPGRADES } from '../constants
 export function useGameLoop() {
   const [gameState, setGameState] = useState<GameState>(() => {
     const saved = localStorage.getItem('streetVendorTycoon');
-    return saved ? JSON.parse(saved) : INITIAL_STATE;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        ...INITIAL_STATE,
+        ...parsed,
+        avatar: parsed.avatar || INITIAL_STATE.avatar
+      };
+    }
+    return INITIAL_STATE;
   });
 
   const [isPaused, setIsPaused] = useState(false);
@@ -106,13 +114,21 @@ export function useGameLoop() {
   const unlockStall = (stall: StallType) => {
     const cost = STALLS[stall].cost;
     if (gameState.money >= cost && !gameState.unlockedStalls.includes(stall)) {
-      setGameState(prev => ({
-        ...prev,
-        money: prev.money - cost,
-        unlockedStalls: [...prev.unlockedStalls, stall],
-        currentStall: stall
-      }));
-      addMessage(`Unlocked ${stall}!`);
+      setGameState(prev => {
+        // Find all menu items that require this stall and aren't unlocked yet
+        const newItems = (Object.keys(MENU) as MenuItem[]).filter(
+          item => MENU[item].reqStall === stall && !prev.unlockedItems.includes(item)
+        );
+
+        return {
+          ...prev,
+          money: prev.money - cost,
+          unlockedStalls: [...prev.unlockedStalls, stall],
+          unlockedItems: [...prev.unlockedItems, ...newItems],
+          currentStall: stall
+        };
+      });
+      addMessage(`Unlocked ${stall} and its menu items!`);
       
       // Add new rivals based on stall
       if (stall === 'Pani Puri Cart') {
@@ -123,6 +139,9 @@ export function useGameLoop() {
            }]
          }));
       }
+    } else if (gameState.unlockedStalls.includes(stall)) {
+      // Just equip it if already unlocked
+      setGameState(prev => ({ ...prev, currentStall: stall }));
     }
   };
 
@@ -301,9 +320,14 @@ export function useGameLoop() {
   }, [isPaused]);
 
   const resetGame = () => {
-    if (window.confirm("Are you sure you want to reset your progress?")) {
-      setGameState(INITIAL_STATE);
-    }
+    setGameState(INITIAL_STATE);
+  };
+
+  const updateAvatar = (config: Partial<AvatarConfig>) => {
+    setGameState(prev => ({
+      ...prev,
+      avatar: { ...prev.avatar, ...config }
+    }));
   };
 
   return {
@@ -316,6 +340,7 @@ export function useGameLoop() {
     unlockMenuItem,
     isPaused,
     setIsPaused,
-    resetGame
+    resetGame,
+    updateAvatar
   };
 }

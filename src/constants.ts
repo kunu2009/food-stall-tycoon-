@@ -100,5 +100,10 @@ export const INITIAL_STATE: GameState = {
     'Dosa': 0,
     'Biryani': 0
   },
-  autoSuppliers: {}
+  autoSuppliers: {},
+  avatar: {
+    color: 'blue',
+    hat: 'ChefHat',
+    accessory: 'None'
+  }
 };

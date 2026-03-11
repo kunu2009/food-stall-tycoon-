@@ -18,6 +18,12 @@ export interface Rival {
   marketShare: number; // percentage of customers they take
 }
 
+export interface AvatarConfig {
+  color: string;
+  hat: string;
+  accessory: string;
+}
+
 export interface GameState {
   money: number;
   day: number;
@@ -37,5 +43,6 @@ export interface GameState {
   rivals: Rival[];
   customersWaiting: Record<MenuItem, number>;
   autoSuppliers: Partial<Record<Ingredient, number>>;
+  avatar: AvatarConfig;
 }
 
