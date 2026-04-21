@@ -2,26 +2,22 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { usePlayerMovement } from '../hooks/usePlayerMovement';
 import { GameState, MenuItem, Ingredient } from '../types';
 import { MENU } from '../constants';
-import { UsersRound, ChefHat, CheckCircle2 } from 'lucide-react';
-import { PlayerAvatar } from './PlayerAvatar';
 import { Player3D } from './Player3D';
 
+const WORLD_SIZE = { w: 2000, h: 2000 };
+
 const STATION_POSITIONS: Record<string, {x: number, y: number, color: string}> = {
-  'Chai': { x: 100, y: 100, color: 'bg-amber-700' },
-  'Masala Chai': { x: 300, y: 100, color: 'bg-orange-800' },
-  'Pani Puri': { x: 500, y: 100, color: 'bg-emerald-600' },
-  'Vada Pav': { x: 100, y: 500, color: 'bg-yellow-600' },
-  'Dosa': { x: 300, y: 500, color: 'bg-slate-200' },
-  'Biryani': { x: 500, y: 500, color: 'bg-stone-800' },
+  'Chai': { x: 800, y: 800, color: 'bg-amber-700' },
+  'Masala Chai': { x: 1200, y: 800, color: 'bg-orange-800' },
+  'Pani Puri': { x: 1000, y: 1000, color: 'bg-emerald-600' },
+  'Vada Pav': { x: 800, y: 1200, color: 'bg-yellow-600' },
+  'Dosa': { x: 1200, y: 1200, color: 'bg-slate-200' },
+  'Biryani': { x: 1000, y: 1400, color: 'bg-stone-800' },
 };
 
-const BOUNDS = { w: 600, h: 600 };
-
-const isoTransform = (x: number, y: number) => {
-  const cx = x - BOUNDS.w / 2;
-  const cy = y - BOUNDS.h / 2;
-  const isoX = (cx - cy) * 0.866;
-  const isoY = (cx + cy) * 0.5;
+const getIsoPos = (x: number, y: number) => {
+  const isoX = (x - y) * 0.866;
+  const isoY = (x + y) * 0.5;
   return { x: isoX, y: isoY };
 };
 
@@ -36,10 +32,22 @@ export function PlayableStall({
   setPrice: (item: MenuItem, price: number) => void,
   isPaused: boolean
 }) {
-  const { pos, isMoving, facing } = usePlayerMovement(BOUNDS, isPaused);
+  const { pos, isMoving, facing } = usePlayerMovement(WORLD_SIZE, isPaused);
   const [cooldown, setCooldown] = useState(0);
   const [isServing, setIsServing] = useState(false);
   const [floatingTexts, setFloatingTexts] = useState<{id: number, x: number, y: number, text: string}[]>([]);
+  const [screenSize, setScreenSize] = useState({ w: typeof window !== 'undefined' ? window.innerWidth : 1000, h: typeof window !== 'undefined' ? window.innerHeight : 800 });
+
+  useEffect(() => {
+    const handleResize = () => setScreenSize({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate camera offset to keep player centered
+  const playerIso = getIsoPos(pos.x, pos.y);
+  const cameraOffsetX = screenSize.w / 2 - playerIso.x;
+  const cameraOffsetY = screenSize.h / 2 - playerIso.y;
 
   const nearestStation = useMemo(() => {
     let nearest = null;
@@ -55,7 +63,7 @@ export function PlayableStall({
       }
     });
 
-    if (minDistance < 80) return nearest;
+    if (minDistance < 120) return nearest;
     return null;
   }, [pos, gameState.unlockedItems]);
 
@@ -108,11 +116,11 @@ export function PlayableStall({
   const gridTiles = useMemo(() => {
     const tiles = [];
     const cellSize = 60;
-    for (let row = 0; row < BOUNDS.h / cellSize; row++) {
-      for (let col = 0; col < BOUNDS.w / cellSize; col++) {
+    for (let row = 0; row < WORLD_SIZE.h / cellSize; row++) {
+      for (let col = 0; col < WORLD_SIZE.w / cellSize; col++) {
         const x = col * cellSize + cellSize / 2;
         const y = row * cellSize + cellSize / 2;
-        const iso = isoTransform(x, y);
+        const iso = getIsoPos(x, y);
         tiles.push(
           <div 
             key={`${row}-${col}`}
@@ -132,29 +140,82 @@ export function PlayableStall({
     return tiles;
   }, []);
 
-  return (
-    <div className="flex flex-col lg:flex-row gap-4">
-      <div className="w-full lg:w-[800px] overflow-x-auto pb-4 shrink-0">
-        <div className="relative bg-slate-800 rounded-2xl border-4 border-slate-700 overflow-hidden shadow-inner flex items-center justify-center" style={{ height: 500 }}>
-          
-          {/* Controls Overlay */}
-          <div className="absolute top-4 left-4 bg-white/90 px-4 py-2 rounded-xl text-sm font-bold text-slate-700 shadow-sm z-[9999] flex items-center gap-2">
-            <div className="flex gap-1">
-              <kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-xs">W</kbd>
-              <kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-xs">A</kbd>
-              <kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-xs">S</kbd>
-              <kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-xs">D</kbd>
-            </div>
-            <span>to move</span>
-            <span className="mx-2 text-slate-300">|</span>
-            <kbd className="bg-slate-100 border border-slate-300 rounded px-2 py-0.5 text-xs">SPACE</kbd>
-            <span>to serve</span>
-          </div>
+  // Decorative elements
+  const decorations = useMemo(() => {
+    const decos = [];
+    const positions = [
+      { x: 400, y: 400, type: 'tree' },
+      { x: 1600, y: 400, type: 'tree' },
+      { x: 400, y: 1600, type: 'tree' },
+      { x: 1600, y: 1600, type: 'tree' },
+      { x: 1000, y: 600, type: 'bench' },
+      { x: 600, y: 1000, type: 'bench' },
+    ];
 
-          {/* Isometric World Container */}
-          <div className="relative w-full h-full">
-            {/* Grid Floor */}
-            {gridTiles}
+    positions.forEach((pos, i) => {
+      const iso = getIsoPos(pos.x, pos.y);
+      const zIndex = Math.floor(pos.x + pos.y);
+
+      if (pos.type === 'tree') {
+        decos.push(
+          <div key={`deco-${i}`} className="absolute flex flex-col items-center justify-end"
+               style={{ left: '50%', top: '50%', marginLeft: iso.x, marginTop: iso.y, transform: 'translate(-50%, -100%)', zIndex }}>
+            <div className="absolute bottom-0 w-16 h-8 bg-black/30 rounded-full blur-[4px] translate-y-1/2"></div>
+            <div className="w-24 h-24 bg-emerald-600 rounded-full border-b-8 border-emerald-800 shadow-inner z-10 relative">
+              <div className="absolute top-2 left-4 w-8 h-8 bg-emerald-500 rounded-full"></div>
+              <div className="absolute top-6 right-4 w-10 h-10 bg-emerald-700 rounded-full"></div>
+            </div>
+            <div className="w-4 h-12 bg-amber-900 border-l-2 border-amber-950 -mt-4 z-0"></div>
+          </div>
+        );
+      } else if (pos.type === 'bench') {
+        decos.push(
+          <div key={`deco-${i}`} className="absolute flex flex-col items-center justify-end"
+               style={{ left: '50%', top: '50%', marginLeft: iso.x, marginTop: iso.y, transform: 'translate(-50%, -100%)', zIndex }}>
+            <div className="absolute bottom-0 w-20 h-6 bg-black/30 rounded-full blur-[2px] translate-y-1/2"></div>
+            <div className="w-20 h-6 bg-amber-700 border-b-4 border-amber-900 rounded-sm z-10"></div>
+            <div className="flex justify-between w-16 -mt-1 z-0">
+              <div className="w-2 h-6 bg-slate-700"></div>
+              <div className="w-2 h-6 bg-slate-700"></div>
+            </div>
+          </div>
+        );
+      }
+    });
+    return decos;
+  }, []);
+
+  return (
+    <div className="fixed inset-0 bg-slate-800 overflow-hidden z-0">
+      {/* Controls Overlay */}
+      <div className="absolute top-4 left-4 bg-white/90 px-4 py-2 rounded-xl text-sm font-bold text-slate-700 shadow-sm z-[9999] flex items-center gap-2">
+        <div className="flex gap-1">
+          <kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-xs">W</kbd>
+          <kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-xs">A</kbd>
+          <kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-xs">S</kbd>
+          <kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-xs">D</kbd>
+        </div>
+        <span>to move</span>
+        <span className="mx-2 text-slate-300">|</span>
+        <kbd className="bg-slate-100 border border-slate-300 rounded px-2 py-0.5 text-xs">SPACE</kbd>
+        <span>to serve</span>
+      </div>
+
+      {/* Isometric World Container */}
+      <div className="relative w-full h-full">
+        <div 
+          className="absolute transition-transform duration-100 ease-linear"
+          style={{
+            left: '50%',
+            top: '50%',
+            transform: `translate(${cameraOffsetX}px, ${cameraOffsetY}px)`
+          }}
+        >
+          {/* Grid Floor */}
+          {gridTiles}
+
+          {/* Decorations */}
+          {decorations}
 
             {/* Stations */}
             {gameState.unlockedItems.map(item => {
@@ -169,7 +230,7 @@ export function PlayableStall({
                 if ((gameState.inventory[ing as Ingredient] || 0) < (qty as number)) canMake = false;
               }
 
-              const iso = isoTransform(station.x, station.y);
+              const iso = getIsoPos(station.x, station.y);
               const zIndex = Math.floor(station.x + station.y);
 
               return (
@@ -232,7 +293,7 @@ export function PlayableStall({
 
             {/* Floating Texts for Sales */}
             {floatingTexts.map(ft => {
-              const iso = isoTransform(ft.x, ft.y);
+              const iso = getIsoPos(ft.x, ft.y);
               return (
                 <div 
                   key={ft.id} 
@@ -253,7 +314,7 @@ export function PlayableStall({
 
             {/* Player Character */}
             {(() => {
-              const iso = isoTransform(pos.x, pos.y);
+              const iso = getIsoPos(pos.x, pos.y);
               const zIndex = Math.floor(pos.x + pos.y);
               return (
                 <div className="absolute transition-transform"
@@ -276,109 +337,64 @@ export function PlayableStall({
           </div>
         </div>
 
-        {/* Mobile Controls */}
-        <div className="lg:hidden mt-4 flex justify-between items-center px-2">
-          <div className="grid grid-cols-3 gap-2">
-            <div />
-            <button 
-              className="bg-slate-200 p-4 rounded-xl active:bg-slate-300 shadow-sm flex items-center justify-center text-xl" 
-              onTouchStart={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' })); }} 
-              onTouchEnd={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowUp' })); }}
-              onMouseDown={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }))}
-              onMouseUp={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowUp' }))}
-              onMouseLeave={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowUp' }))}
-            >
-              ↑
-            </button>
-            <div />
-            <button 
-              className="bg-slate-200 p-4 rounded-xl active:bg-slate-300 shadow-sm flex items-center justify-center text-xl" 
-              onTouchStart={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' })); }} 
-              onTouchEnd={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft' })); }}
-              onMouseDown={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))}
-              onMouseUp={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft' }))}
-              onMouseLeave={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft' }))}
-            >
-              ←
-            </button>
-            <button 
-              className="bg-slate-200 p-4 rounded-xl active:bg-slate-300 shadow-sm flex items-center justify-center text-xl" 
-              onTouchStart={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' })); }} 
-              onTouchEnd={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowDown' })); }}
-              onMouseDown={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }))}
-              onMouseUp={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowDown' }))}
-              onMouseLeave={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowDown' }))}
-            >
-              ↓
-            </button>
-            <button 
-              className="bg-slate-200 p-4 rounded-xl active:bg-slate-300 shadow-sm flex items-center justify-center text-xl" 
-              onTouchStart={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })); }} 
-              onTouchEnd={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' })); }}
-              onMouseDown={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))}
-              onMouseUp={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' }))}
-              onMouseLeave={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' }))}
-            >
-              →
-            </button>
-          </div>
+      {/* Mobile Controls */}
+      <div className="lg:hidden absolute bottom-4 left-0 right-0 flex justify-between items-center px-4 z-[9999]">
+        <div className="grid grid-cols-3 gap-2">
+          <div />
           <button 
-            className="bg-teal-600 text-white p-6 rounded-full font-bold shadow-lg active:bg-teal-700 active:scale-95 transition-transform" 
-            onTouchStart={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Space', code: 'Space' })); }} 
-            onTouchEnd={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Space', code: 'Space' })); }}
-            onMouseDown={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Space', code: 'Space' }))}
-            onMouseUp={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Space', code: 'Space' }))}
-            onMouseLeave={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Space', code: 'Space' }))}
+            className="bg-white/80 backdrop-blur p-4 rounded-xl active:bg-slate-200 shadow-lg flex items-center justify-center text-xl" 
+            onTouchStart={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' })); }} 
+            onTouchEnd={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowUp' })); }}
+            onMouseDown={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }))}
+            onMouseUp={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowUp' }))}
+            onMouseLeave={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowUp' }))}
           >
-            SERVE
+            ↑
+          </button>
+          <div />
+          <button 
+            className="bg-white/80 backdrop-blur p-4 rounded-xl active:bg-slate-200 shadow-lg flex items-center justify-center text-xl" 
+            onTouchStart={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' })); }} 
+            onTouchEnd={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft' })); }}
+            onMouseDown={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }))}
+            onMouseUp={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft' }))}
+            onMouseLeave={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowLeft' }))}
+          >
+            ←
+          </button>
+          <button 
+            className="bg-white/80 backdrop-blur p-4 rounded-xl active:bg-slate-200 shadow-lg flex items-center justify-center text-xl" 
+            onTouchStart={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' })); }} 
+            onTouchEnd={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowDown' })); }}
+            onMouseDown={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }))}
+            onMouseUp={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowDown' }))}
+            onMouseLeave={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowDown' }))}
+          >
+            ↓
+          </button>
+          <button 
+            className="bg-white/80 backdrop-blur p-4 rounded-xl active:bg-slate-200 shadow-lg flex items-center justify-center text-xl" 
+            onTouchStart={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' })); }} 
+            onTouchEnd={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' })); }}
+            onMouseDown={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))}
+            onMouseUp={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' }))}
+            onMouseLeave={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight' }))}
+          >
+            →
           </button>
         </div>
+        <button 
+          className="bg-teal-600 text-white p-6 rounded-full font-bold shadow-xl active:bg-teal-700 active:scale-95 transition-transform" 
+          onTouchStart={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Space', code: 'Space' })); }} 
+          onTouchEnd={(e) => { e.preventDefault(); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Space', code: 'Space' })); }}
+          onMouseDown={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Space', code: 'Space' }))}
+          onMouseUp={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Space', code: 'Space' }))}
+          onMouseLeave={() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Space', code: 'Space' }))}
+        >
+          SERVE
+        </button>
       </div>
 
-      <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-4 h-[400px] overflow-y-auto">
-        <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
-          <UsersRound size={20} className="text-teal-600" /> Station Management
-        </h3>
-        
-        <div className="flex flex-col gap-3">
-          {gameState.unlockedItems.map(item => {
-            const menuItem = MENU[item as MenuItem];
-            let canMake = true;
-            for (const [ing, qty] of Object.entries(menuItem.recipe)) {
-              if ((gameState.inventory[ing as Ingredient] || 0) < (qty as number)) canMake = false;
-            }
-
-            return (
-              <div key={item} className={`p-3 rounded-xl border flex flex-col gap-2 transition-colors ${canMake ? 'bg-slate-50 border-slate-200' : 'bg-red-50 border-red-200'}`}>
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-slate-800">{item}</span>
-                  <div className="flex items-center bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
-                    <span className="text-slate-500 px-2 font-bold text-sm">₹</span>
-                    <input 
-                      type="number" 
-                      min="1"
-                      value={gameState.customPrices[item as MenuItem]}
-                      onChange={(e) => setPrice(item as MenuItem, parseInt(e.target.value) || 1)}
-                      className="w-14 bg-transparent text-sm font-bold text-slate-800 text-center outline-none"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {Object.entries(menuItem.recipe).map(([ing, qty]) => {
-                    const hasEnough = (gameState.inventory[ing as Ingredient] || 0) >= (qty as number);
-                    return (
-                      <span key={ing} className={`text-[10px] px-2 py-1 rounded-md border font-medium ${hasEnough ? 'bg-white border-slate-200 text-slate-600' : 'bg-red-100 border-red-300 text-red-700'}`}>
-                        {qty} {ing}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      
       {/* Add keyframes for floating text */}
       <style>{`
         @keyframes floatUp {

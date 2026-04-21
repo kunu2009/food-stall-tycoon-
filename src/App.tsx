@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useGameLoop } from './hooks/useGameLoop';
-import { Footer } from './components/Footer';
 import { StallVisualizer } from './components/StallVisualizer';
 import { PlayableStall } from './components/PlayableStall';
 import { PlayerAvatar } from './components/PlayerAvatar';
 import { AvatarCustomizer } from './components/AvatarCustomizer';
 import { INGREDIENTS, MENU, STALLS, UPGRADES } from './constants';
 import { Ingredient, MenuItem, StallType } from './types';
-import { Store, ShoppingCart, TrendingUp, Settings, Clock, Sun, CloudRain, Flame, Wind, AlertCircle, Coffee, Utensils, Truck, Users, Star, Heart, UsersRound } from 'lucide-react';
+import { RobotCatSvg } from './components/RobotCatSvg';
+import { Store, ShoppingCart, TrendingUp, Settings, Clock, Sun, CloudRain, Flame, Wind, AlertCircle, Coffee, Utensils, Truck, Users, Star, Heart, UsersRound, Pause, Play, Info, Github, Instagram, Mail, Globe } from 'lucide-react';
 
 export default function App() {
   const { 
@@ -24,7 +24,7 @@ export default function App() {
     updateAvatar
   } = useGameLoop();
 
-  const [activeTab, setActiveTab] = useState<'sell' | 'market' | 'upgrades' | 'rivals'>('sell');
+  const [activeTab, setActiveTab] = useState<'stations' | 'market' | 'upgrades' | 'rivals' | 'about'>('stations');
   const [showResetModal, setShowResetModal] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
 
@@ -53,10 +53,19 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-teal-200">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+    <div className="w-screen h-screen overflow-hidden bg-slate-900 text-slate-800 font-sans selection:bg-teal-200 relative">
+      
+      {/* 3D Game View - ALWAYS RENDERED in background */}
+      <PlayableStall 
+        gameState={gameState} 
+        sellItem={sellItem} 
+        setPrice={setPrice} 
+        isPaused={isPaused} 
+      />
+
+      {/* HUD (Header) - ALWAYS RENDERED but floating */}
+      <header className="absolute top-0 left-0 right-0 bg-white/80 backdrop-blur border-b border-slate-200/50 z-10 shadow-sm pointer-events-auto">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setShowAvatarModal(true)}
@@ -115,309 +124,418 @@ export default function App() {
         )}
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        
-        {/* Visualizer */}
-        <StallVisualizer 
-          stall={gameState.currentStall} 
-          upgrades={gameState.upgrades} 
-          weather={gameState.weather} 
-          time={gameState.time} 
-        />
-
-        {/* Messages Log */}
-        <div className="mb-8 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Recent Activity</h3>
-          <div className="flex flex-col gap-1">
-            {gameState.messages.map((msg, i) => (
-              <div key={i} className={`text-sm ${i === 0 ? 'text-slate-800 font-medium' : 'text-slate-400'}`}>
-                {msg}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-          <button 
-            onClick={() => setActiveTab('sell')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'sell' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
-          >
-            <Store size={18} /> Sell Food
-          </button>
-          <button 
-            onClick={() => setActiveTab('market')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'market' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
-          >
-            <ShoppingCart size={18} /> Market (Buy Ingredients)
-          </button>
-          <button 
-            onClick={() => setActiveTab('upgrades')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'upgrades' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
-          >
-            <TrendingUp size={18} /> Upgrades & Expansion
-          </button>
-          <button 
-            onClick={() => setActiveTab('rivals')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'rivals' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
-          >
-            <Users size={18} /> Rivals
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        <div className="min-h-[400px]">
-          
-          {/* SELL TAB */}
-          {activeTab === 'sell' && (
-            <PlayableStall 
-              gameState={gameState} 
-              sellItem={sellItem} 
-              setPrice={setPrice} 
-              isPaused={isPaused} 
-            />
-          )}
-
-          {/* MARKET TAB */}
-          {activeTab === 'market' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                <h2 className="font-bold text-slate-800">Wholesale Market</h2>
-                <span className="text-sm text-slate-500">Buy ingredients in bulk</span>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {(Object.keys(INGREDIENTS) as Ingredient[]).map(ing => {
-                  const data = INGREDIENTS[ing];
-                  const stock = gameState.inventory[ing] || 0;
-                  const canBuy = gameState.money >= data.cost;
-
-                  return (
-                    <div key={ing} className="p-4 flex flex-wrap items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
-                      <div className="flex-1 min-w-[150px]">
-                        <h3 className="font-bold text-slate-800">{ing}</h3>
-                        <p className="text-sm text-slate-500">Stock: <span className={`font-medium ${stock < 10 ? 'text-red-500' : 'text-slate-700'}`}>{stock} units</span></p>
-                      </div>
-                      
-                      <div className="text-right min-w-[100px]">
-                        <div className="font-bold text-slate-800">₹{data.cost}</div>
-                        <div className="text-xs text-slate-500">for {data.batch} units</div>
-                      </div>
-
-                      <button 
-                        onClick={() => buyIngredient(ing, 1)}
-                        disabled={!canBuy}
-                        className={`px-6 py-2 rounded-xl font-bold transition-all active:scale-[0.98] ${canBuy ? 'bg-slate-800 hover:bg-slate-900 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
-                      >
-                        Buy
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+      {/* Pause Menu Overlay */}
+      {isPaused && (
+        <div className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto pt-24">
+          <div className="bg-slate-50 rounded-3xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            
+            {/* Modal Header */}
+            <div className="bg-white border-b border-slate-200 p-6 flex justify-between items-center sticky top-0 z-20">
+              <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                <Pause className="text-teal-600" /> Game Paused
+              </h2>
+              <button 
+                onClick={() => setIsPaused(false)}
+                className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition-colors flex items-center gap-2"
+              >
+                <Play size={18} /> Resume
+              </button>
             </div>
-          )}
 
-          {/* UPGRADES TAB */}
-          {activeTab === 'upgrades' && (
-            <div className="space-y-8">
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto flex-1">
               
-              {/* Stalls Expansion */}
-              <div>
-                <h2 className="font-bold text-xl text-slate-800 mb-4 flex items-center gap-2">
-                  <Store className="text-teal-600" /> Expand Empire
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(Object.keys(STALLS) as StallType[]).map(stall => {
-                    const data = STALLS[stall];
-                    const isUnlocked = gameState.unlockedStalls.includes(stall);
-                    const canAfford = gameState.money >= data.cost;
-
-                    if (isUnlocked) {
-                      return (
-                        <div key={stall} className="bg-teal-50 border border-teal-200 p-4 rounded-2xl flex justify-between items-center">
-                          <div>
-                            <h3 className="font-bold text-teal-900">{stall}</h3>
-                            <p className="text-xs text-teal-700">Owned</p>
-                          </div>
-                          {gameState.currentStall !== stall && (
-                            <button 
-                              onClick={() => unlockStall(stall)} // Reusing function to set current
-                              className="px-4 py-2 bg-white text-teal-700 rounded-lg text-sm font-bold shadow-sm"
-                            >
-                              Equip
-                            </button>
-                          )}
-                          {gameState.currentStall === stall && (
-                            <span className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-bold shadow-sm">Active</span>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div key={stall} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex flex-col">
-                        <h3 className="font-bold text-slate-800 text-lg">{stall}</h3>
-                        <p className="text-sm text-slate-500 mb-4">{data.desc}</p>
-                        
-                        <div className="mt-auto flex items-center justify-between">
-                          <span className="font-bold text-slate-800">₹{data.cost.toLocaleString()}</span>
-                          <button 
-                            onClick={() => unlockStall(stall)}
-                            disabled={!canAfford}
-                            className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${canAfford ? 'bg-slate-800 hover:bg-slate-900 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
-                          >
-                            Purchase
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Menu Expansion */}
-              <div>
-                <h2 className="font-bold text-xl text-slate-800 mb-4 flex items-center gap-2">
-                  <Utensils className="text-teal-600" /> New Menu Items
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {(Object.keys(MENU) as MenuItem[]).map(item => {
-                    const isUnlocked = gameState.unlockedItems.includes(item);
-                    const reqStall = MENU[item].reqStall;
-                    const hasStall = gameState.unlockedStalls.includes(reqStall);
-
-                    if (isUnlocked) return null;
-
-                    return (
-                      <div key={item} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-                        <h3 className="font-bold text-slate-800">{item}</h3>
-                        <p className="text-xs text-slate-500 mb-3">Requires: {reqStall}</p>
-                        <button 
-                          onClick={() => unlockMenuItem(item)}
-                          disabled={!hasStall}
-                          className={`w-full py-2 rounded-lg font-bold text-sm transition-all ${hasStall ? 'bg-teal-100 hover:bg-teal-200 text-teal-800' : 'bg-slate-50 text-slate-400 cursor-not-allowed'}`}
-                        >
-                          {hasStall ? 'Add to Menu (Free)' : 'Stall Required'}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Upgrades */}
-              <div>
-                <h2 className="font-bold text-xl text-slate-800 mb-4 flex items-center gap-2">
-                  <TrendingUp className="text-teal-600" /> Business Upgrades
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {UPGRADES.map(upg => {
-                    const isOwned = gameState.upgrades.includes(upg.id);
-                    const canAfford = gameState.money >= upg.cost;
-
-                    if (isOwned) {
-                      return (
-                        <div key={upg.id} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex justify-between items-center opacity-70">
-                          <div>
-                            <h3 className="font-bold text-slate-700 line-through">{upg.name}</h3>
-                            <p className="text-xs text-slate-500">{upg.desc}</p>
-                          </div>
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Purchased</span>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div key={upg.id} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex justify-between items-center gap-4">
-                        <div className="flex-1">
-                          <h3 className="font-bold text-slate-800">{upg.name}</h3>
-                          <p className="text-xs text-slate-500">{upg.desc}</p>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <span className="font-bold text-slate-800">₹{upg.cost.toLocaleString()}</span>
-                          <button 
-                            onClick={() => buyUpgrade(upg.id, upg.cost)}
-                            disabled={!canAfford}
-                            className={`px-4 py-1.5 rounded-lg font-bold text-sm transition-all ${canAfford ? 'bg-slate-800 hover:bg-slate-900 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
-                          >
-                            Buy
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-            </div>
-          )}
-
-          {/* RIVALS TAB */}
-          {activeTab === 'rivals' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {gameState.rivals.map(rival => (
-                <div key={rival.id} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="font-bold text-lg text-slate-800">{rival.name}</h3>
-                      <p className="text-xs text-slate-500">{rival.stallType}</p>
+              {/* Messages Log */}
+              <div className="mb-8 bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Recent Activity</h3>
+                <div className="flex flex-col gap-1">
+                  {gameState.messages.map((msg, i) => (
+                    <div key={i} className={`text-sm ${i === 0 ? 'text-slate-800 font-medium' : 'text-slate-400'}`}>
+                      {msg}
                     </div>
-                    <div className="bg-rose-50 text-rose-700 px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1">
-                      <Users size={14} /> {rival.marketShare}% Market
+                  ))}
+                </div>
+              </div>
+
+              {/* Navigation Tabs */}
+              <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+                <button 
+                  onClick={() => setActiveTab('stations')}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'stations' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
+                >
+                  <UsersRound size={18} /> Manage Stations
+                </button>
+                <button 
+                  onClick={() => setActiveTab('market')}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'market' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
+                >
+                  <ShoppingCart size={18} /> Market (Buy Ingredients)
+                </button>
+                <button 
+                  onClick={() => setActiveTab('upgrades')}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'upgrades' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
+                >
+                  <TrendingUp size={18} /> Upgrades & Expansion
+                </button>
+                <button 
+                  onClick={() => setActiveTab('rivals')}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'rivals' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
+                >
+                  <Users size={18} /> Rivals
+                </button>
+                <button 
+                  onClick={() => setActiveTab('about')}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${activeTab === 'about' ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
+                >
+                  <Info size={18} /> About 7K
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="min-h-[400px]">
+                
+                {/* STATIONS TAB */}
+                {activeTab === 'stations' && (
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-4">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
+                      <UsersRound size={20} className="text-teal-600" /> Station Management
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {gameState.unlockedItems.map(item => {
+                        const menuItem = MENU[item as MenuItem];
+                        let canMake = true;
+                        for (const [ing, qty] of Object.entries(menuItem.recipe)) {
+                          if ((gameState.inventory[ing as Ingredient] || 0) < (qty as number)) canMake = false;
+                        }
+
+                        return (
+                          <div key={item} className={`p-4 rounded-xl border flex flex-col gap-3 transition-colors ${canMake ? 'bg-slate-50 border-slate-200' : 'bg-red-50 border-red-200'}`}>
+                            <div className="flex justify-between items-center">
+                              <span className="font-bold text-slate-800">{item}</span>
+                              <div className="flex items-center bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
+                                <span className="text-slate-500 px-2 font-bold text-sm">₹</span>
+                                <input 
+                                  type="number" 
+                                  min="1"
+                                  value={gameState.customPrices[item as MenuItem]}
+                                  onChange={(e) => setPrice(item as MenuItem, parseInt(e.target.value) || 1)}
+                                  className="w-14 bg-transparent text-sm font-bold text-slate-800 text-center outline-none"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {Object.entries(menuItem.recipe).map(([ing, qty]) => {
+                                const hasEnough = (gameState.inventory[ing as Ingredient] || 0) >= (qty as number);
+                                return (
+                                  <span key={ing} className={`text-xs px-2 py-1 rounded-md border font-medium ${hasEnough ? 'bg-white border-slate-200 text-slate-600' : 'bg-red-100 border-red-300 text-red-700'}`}>
+                                    {qty} {ing}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Their Prices</p>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(rival.prices).map(([item, price]) => (
-                          <div key={item} className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm">
-                            <span className="text-slate-600 font-medium">{item}</span>
-                            <span className="text-slate-900 font-bold">₹{price}</span>
+                )}
+
+                {/* MARKET TAB */}
+                {activeTab === 'market' && (
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                      <h2 className="font-bold text-slate-800">Wholesale Market</h2>
+                      <span className="text-sm text-slate-500">Buy ingredients in bulk</span>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {(Object.keys(INGREDIENTS) as Ingredient[]).map(ing => {
+                        const data = INGREDIENTS[ing];
+                        const stock = gameState.inventory[ing] || 0;
+                        const canBuy = gameState.money >= data.cost;
+
+                        return (
+                          <div key={ing} className="p-4 flex flex-wrap items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
+                            <div className="flex-1 min-w-[150px]">
+                              <h3 className="font-bold text-slate-800">{ing}</h3>
+                              <p className="text-sm text-slate-500">Stock: <span className={`font-medium ${stock < 10 ? 'text-red-500' : 'text-slate-700'}`}>{stock} units</span></p>
+                            </div>
+                            
+                            <div className="text-right min-w-[100px]">
+                              <div className="font-bold text-slate-800">₹{data.cost}</div>
+                              <div className="text-xs text-slate-500">for {data.batch} units</div>
+                            </div>
+
+                            <button 
+                              onClick={() => buyIngredient(ing, 1)}
+                              disabled={!canBuy}
+                              className={`px-6 py-2 rounded-xl font-bold transition-all active:scale-[0.98] ${canBuy ? 'bg-slate-800 hover:bg-slate-900 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                            >
+                              Buy
+                            </button>
                           </div>
-                        ))}
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* UPGRADES TAB */}
+                {activeTab === 'upgrades' && (
+                  <div className="space-y-8">
+                    
+                    {/* Stalls Expansion */}
+                    <div>
+                      <h2 className="font-bold text-xl text-slate-800 mb-4 flex items-center gap-2">
+                        <Store className="text-teal-600" /> Expand Empire
+                      </h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(Object.keys(STALLS) as StallType[]).map(stall => {
+                          const data = STALLS[stall];
+                          const isUnlocked = gameState.unlockedStalls.includes(stall);
+                          const canAfford = gameState.money >= data.cost;
+
+                          if (isUnlocked) {
+                            return (
+                              <div key={stall} className="bg-teal-50 border border-teal-200 p-4 rounded-2xl flex justify-between items-center">
+                                <div>
+                                  <h3 className="font-bold text-teal-900">{stall}</h3>
+                                  <p className="text-xs text-teal-700">Owned</p>
+                                </div>
+                                {gameState.currentStall !== stall && (
+                                  <button 
+                                    onClick={() => unlockStall(stall)} // Reusing function to set current
+                                    className="px-4 py-2 bg-white text-teal-700 rounded-lg text-sm font-bold shadow-sm"
+                                  >
+                                    Equip
+                                  </button>
+                                )}
+                                {gameState.currentStall === stall && (
+                                  <span className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-bold shadow-sm">Active</span>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div key={stall} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm flex flex-col">
+                              <h3 className="font-bold text-slate-800 text-lg">{stall}</h3>
+                              <p className="text-sm text-slate-500 mb-4">{data.desc}</p>
+                              
+                              <div className="mt-auto flex items-center justify-between">
+                                <span className="font-bold text-slate-800">₹{data.cost.toLocaleString()}</span>
+                                <button 
+                                  onClick={() => unlockStall(stall)}
+                                  disabled={!canAfford}
+                                  className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${canAfford ? 'bg-slate-800 hover:bg-slate-900 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                                >
+                                  Purchase
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
+                    </div>
+
+                    {/* Menu Expansion */}
+                    <div>
+                      <h2 className="font-bold text-xl text-slate-800 mb-4 flex items-center gap-2">
+                        <Utensils className="text-teal-600" /> New Menu Items
+                      </h2>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {(Object.keys(MENU) as MenuItem[]).map(item => {
+                          const isUnlocked = gameState.unlockedItems.includes(item);
+                          const reqStall = MENU[item].reqStall;
+                          const hasStall = gameState.unlockedStalls.includes(reqStall);
+
+                          if (isUnlocked) return null;
+
+                          return (
+                            <div key={item} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+                              <h3 className="font-bold text-slate-800">{item}</h3>
+                              <p className="text-xs text-slate-500 mb-3">Requires: {reqStall}</p>
+                              <button 
+                                onClick={() => unlockMenuItem(item)}
+                                disabled={!hasStall}
+                                className={`w-full py-2 rounded-lg font-bold text-sm transition-all ${hasStall ? 'bg-teal-100 hover:bg-teal-200 text-teal-800' : 'bg-slate-50 text-slate-400 cursor-not-allowed'}`}
+                              >
+                                {hasStall ? 'Add to Menu (Free)' : 'Stall Required'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Upgrades */}
+                    <div>
+                      <h2 className="font-bold text-xl text-slate-800 mb-4 flex items-center gap-2">
+                        <TrendingUp className="text-teal-600" /> Business Upgrades
+                      </h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {UPGRADES.map(upg => {
+                          const isOwned = gameState.upgrades.includes(upg.id);
+                          const canAfford = gameState.money >= upg.cost;
+
+                          if (isOwned) {
+                            return (
+                              <div key={upg.id} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex justify-between items-center opacity-70">
+                                <div>
+                                  <h3 className="font-bold text-slate-700 line-through">{upg.name}</h3>
+                                  <p className="text-xs text-slate-500">{upg.desc}</p>
+                                </div>
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Purchased</span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div key={upg.id} className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex justify-between items-center gap-4">
+                              <div className="flex-1">
+                                <h3 className="font-bold text-slate-800">{upg.name}</h3>
+                                <p className="text-xs text-slate-500">{upg.desc}</p>
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <span className="font-bold text-slate-800">₹{upg.cost.toLocaleString()}</span>
+                                <button 
+                                  onClick={() => buyUpgrade(upg.id, upg.cost)}
+                                  disabled={!canAfford}
+                                  className={`px-4 py-1.5 rounded-lg font-bold text-sm transition-all ${canAfford ? 'bg-slate-800 hover:bg-slate-900 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                                >
+                                  Buy
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
+                {/* RIVALS TAB */}
+                {activeTab === 'rivals' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {gameState.rivals.map(rival => (
+                      <div key={rival.id} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-bold text-lg text-slate-800">{rival.name}</h3>
+                            <p className="text-xs text-slate-500">{rival.stallType}</p>
+                          </div>
+                          <div className="bg-rose-50 text-rose-700 px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1">
+                            <Users size={14} /> {rival.marketShare}% Market
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Their Prices</p>
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(rival.prices).map(([item, price]) => (
+                                <div key={item} className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm">
+                                  <span className="text-slate-600 font-medium">{item}</span>
+                                  <span className="text-slate-900 font-bold">₹{price}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div className="pt-3 border-t border-slate-100">
+                            <p className="text-xs text-slate-500">
+                              Aggressiveness: <span className="font-medium text-slate-700">{Math.round(rival.aggressiveness * 100)}%</span>
+                              <span className="mx-2">•</span>
+                              Quality: <span className="font-medium text-slate-700">{Math.round(rival.quality * 100)}%</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {gameState.rivals.length === 0 && (
+                      <div className="col-span-full text-center py-12 text-slate-500">
+                        No rivals yet. Enjoy the monopoly while it lasts!
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ABOUT TAB */}
+                {activeTab === 'about' && (
+                  <div className="bg-slate-900 rounded-3xl p-8 shadow-inner overflow-hidden relative text-slate-200">
+                    <div className="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 opacity-40 mix-blend-screen pointer-events-none transform translate-x-1/4 -translate-y-1/4">
+                      <RobotCatSvg className="w-full h-full" />
                     </div>
                     
-                    <div className="pt-3 border-t border-slate-100">
-                      <p className="text-xs text-slate-500">
-                        Aggressiveness: <span className="font-medium text-slate-700">{Math.round(rival.aggressiveness * 100)}%</span>
-                        <span className="mx-2">•</span>
-                        Quality: <span className="font-medium text-slate-700">{Math.round(rival.quality * 100)}%</span>
-                      </p>
+                    <div className="relative z-10 max-w-2xl">
+                      <div className="mb-8">
+                        <div className="inline-block bg-teal-500/20 border border-teal-500/30 text-teal-300 px-4 py-1.5 rounded-full text-sm font-bold tracking-wider mb-4 uppercase shadow-sm shadow-teal-900/50">
+                          Made by 7K Ecosystem
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
+                          Street Vendor Tycoon <br/>
+                          <span className="text-teal-400">Indian Edition</span>
+                        </h2>
+                        <p className="text-slate-400 text-lg leading-relaxed max-w-xl">
+                          Experience the bustling streets of India in this immersive 3D management game. Build your empire, serve hungry customers, and outsmart your rivals.
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-800/80 backdrop-blur-sm border border-slate-700 p-6 rounded-2xl mb-8">
+                        <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                          <span className="text-teal-400">About the Creator:</span> Kunal
+                        </h3>
+                        <p className="text-slate-400 mb-6 font-medium">Founder of 7K Ecosystem</p>
+                        
+                        <div className="flex flex-wrap gap-4">
+                          <a href="https://7kc.me" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-teal-600 hover:text-white text-slate-300 rounded-xl transition-all border border-slate-700 hover:border-teal-500 group">
+                            <Globe size={18} className="text-slate-500 group-hover:text-white" /> Portfolio
+                          </a>
+                          <a href="https://instagram.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-teal-600 hover:text-white text-slate-300 rounded-xl transition-all border border-slate-700 hover:border-teal-500 group">
+                            <Instagram size={18} className="text-slate-500 group-hover:text-white" /> Instagram
+                          </a>
+                          <a href="https://github.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-teal-600 hover:text-white text-slate-300 rounded-xl transition-all border border-slate-700 hover:border-teal-500 group">
+                            <Github size={18} className="text-slate-500 group-hover:text-white" /> GitHub
+                          </a>
+                          <a href="mailto:7kmindbeatss@gmail.com" className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-teal-600 hover:text-white text-slate-300 rounded-xl transition-all border border-slate-700 hover:border-teal-500 group">
+                            <Mail size={18} className="text-slate-500 group-hover:text-white" /> Email
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="pt-6 border-t border-slate-800 text-sm text-slate-500 font-medium tracking-wide">
+                        © 2025 7K Ecosystem. All rights reserved.
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              {gameState.rivals.length === 0 && (
-                <div className="col-span-full text-center py-12 text-slate-500">
-                  No rivals yet. Enjoy the monopoly while it lasts!
-                </div>
-              )}
+                )}
+
+              </div>
             </div>
-          )}
-
+          </div>
         </div>
-      </main>
+      )}
 
-      {/* Settings / Controls */}
-      <div className="fixed bottom-4 right-4 flex gap-2">
-        <button 
-          onClick={() => setIsPaused(!isPaused)}
-          className="bg-white p-3 rounded-full shadow-lg border border-slate-200 text-slate-600 hover:text-teal-600 transition-colors"
-          title={isPaused ? "Resume Game" : "Pause Game"}
-        >
-          {isPaused ? <Store size={20} /> : <Clock size={20} />}
-        </button>
-        <button 
-          onClick={() => setShowResetModal(true)}
-          className="bg-white p-3 rounded-full shadow-lg border border-slate-200 text-slate-600 hover:text-red-600 transition-colors"
-          title="Reset Game"
-        >
-          <Settings size={20} />
-        </button>
-      </div>
+      {/* Floating Controls */}
+      {!isPaused && (
+        <div className="absolute bottom-6 right-6 flex gap-3 z-40">
+          <button 
+            onClick={() => setIsPaused(true)}
+            className="bg-white/90 backdrop-blur p-4 rounded-full shadow-xl border border-slate-200 text-slate-700 hover:text-teal-600 hover:scale-105 transition-all"
+            title="Pause & Menu"
+          >
+            <Pause size={24} />
+          </button>
+          <button 
+            onClick={() => setShowResetModal(true)}
+            className="bg-white/90 backdrop-blur p-4 rounded-full shadow-xl border border-slate-200 text-slate-700 hover:text-red-600 hover:scale-105 transition-all"
+            title="Reset Game"
+          >
+            <Settings size={24} />
+          </button>
+        </div>
+      )}
 
       {/* Reset Modal */}
       {showResetModal && (
@@ -454,8 +572,6 @@ export default function App() {
           onClose={() => setShowAvatarModal(false)} 
         />
       )}
-
-      <Footer />
     </div>
   );
 }
